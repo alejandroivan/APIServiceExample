@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "git@github.com:alejandroivan/APIService.git",
       "state" : {
-        "revision" : "b01d16be78b9fb8c9ce90fac85393cd9def1ee2b",
-        "version" : "0.3.0"
+        "revision" : "5f9595a2ae13ea613874e08663ad9ad356cede02",
+        "version" : "0.3.5"
       }
     }
   ],

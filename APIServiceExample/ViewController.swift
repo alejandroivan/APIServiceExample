@@ -59,60 +59,83 @@ class ViewController: UIViewController {
         let url = URL(string: "https://pokeapi.co/api/v2/pokemon/ditto")!
 
         Task {
+
+            // MARK: - SSL Pinning Disabled
+
             do {
                 let pokemon: Pokemon = try await apiService.get(url)
-                print("[SSL Disabled] Pokémon: \(pokemon)")
+                print("[SSL Pinning Disabled] Pokémon: \(pokemon)")
             } catch {
-                print("[SSL Disabled] Error: \(error)")
+                print("[SSL Pinning Disabled] Error: \(error)")
             }
-        }
 
-        Task {
+            // MARK: - SSL Pinning Enabled - Custom Request
+
+            let request = Request(baseURL: url, method: .get, parameters: ["hello": "world"])
+            // Output: https://pokeapi.co/api/v2/pokemon/ditto?hello=world
+            print("[SSL Pinning Enabled - Custom Request] Final URL: \(request.finalURL)")
+
             do {
-                let pokemon: Pokemon = try await apiServicePinnedWithKeyHashes.get(url)
-                print("[SSL Enabled - Valid Hashes] Pokémon: \(pokemon)")
-            } catch {
-                print("[SSL Enabled - Valid Hashes] Error: \(error)")
-            }
-        }
+                let (data, httpURLRequest) = try await apiServicePinnedWithKeyHashes.perform(
+                    request,
+                    validatesStatusCode: false
+                )
 
-        Task {
+                guard [200, 204].contains(httpURLRequest.statusCode) else {
+                    print("[SSL Pinning Enabled - Custom Request] Invalid status code: \(httpURLRequest.statusCode)")
+                    return
+                }
+
+                let pokemon: Pokemon = try JSONDecoder().decode(Pokemon.self, from: data)
+                print("[SSL Pinning Enabled - Custom Request] Pokémon: \(pokemon)")
+            } catch {
+                print("[SSL Pinning Enabled - Custom Request] Error: \(error)")
+            }
+
+            // MARK: - SSL Pinning Enabled - Valid Certificate: PokeApi
+
             do {
                 let pokemon: Pokemon = try await apiServicePinnedWithValidDERCertificate.get(url)
-                print("[SSL Enabled - Valid Certificate: PokeApi] Pokémon: \(pokemon)")
+                print("[SSL Pinning Enabled - Valid Certificate: PokeApi] Pokémon: \(pokemon)")
             } catch {
-                print("[SSL Enabled - Valid Certificate: PokeApi] Error: \(error)")
+                print("[SSL Pinning Enabled - Valid Certificate: PokeApi] Error: \(error)")
             }
-        }
 
-        Task {
+            // MARK: - SSL Pinning Enabled - Invalid Certificate: Google
+
             do {
                 let pokemon: Pokemon = try await apiServicePinnedWithInvalidDERCertificate.get(url)
-                print("[SSL Enabled - Invalid Certificate: Google] Pokémon: \(pokemon)")
+                print("[SSL Pinning Enabled - Invalid Certificate: Google] Pokémon: \(pokemon)")
             } catch {
-                print("[SSL Enabled - Invalid Certificate: Google] Error: \(error)")
+                print("[SSL Pinning Enabled - Invalid Certificate: Google] Error: \(error)")
             }
-        }
 
-        Task {
+            // MARK: - SSL Pinning Enabled - Valid Hashes
+
+            do {
+                let pokemon: Pokemon = try await apiServicePinnedWithKeyHashes.get(url)
+                print("[SSL Pinning Enabled - Valid Hashes] Pokémon: \(pokemon)")
+            } catch {
+                print("[SSL Pinning Enabled - Valid Hashes] Error: \(error)")
+            }
+
+            // MARK: - SSL Pinning Enabled - Wrong Hashes
+
             do {
                 let pokemon: Pokemon = try await apiServicePinnedWithWrongHashes.get(url)
-                print("[SSL Enabled - Wrong Hashes] Pokémon: \(pokemon)")
+                print("[SSL Pinning Enabled - Wrong Hashes] Pokémon: \(pokemon)")
             } catch {
-                print("[SSL Enabled - Wrong Hashes] Error: \(error)")
+                print("[SSL Pinning Enabled - Wrong Hashes] Error: \(error)")
             }
-        }
 
-        Task {
+            // MARK: - SSL Pinning Enabled - No Hashes
+
             do {
                 let pokemon: Pokemon = try await apiServicePinnedWithoutHashes.get(url)
-                print("[SSL Enabled - No Hashes] Pokémon: \(pokemon)")
+                print("[SSL Pinning Enabled - No Hashes] Pokémon: \(pokemon)")
             } catch {
-                print("[SSL Enabled - No Hashes] Error: \(error)")
+                print("[SSL Pinning Enabled - No Hashes] Error: \(error)")
             }
         }
     }
-
-
 }
-
