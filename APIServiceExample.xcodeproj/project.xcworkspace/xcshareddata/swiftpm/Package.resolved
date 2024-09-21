@@ -1,0 +1,15 @@
+{
+  "originHash" : "4267319aeb31158dee03f946210ea7f3576f69ff750947e863aba9de0d587883",
+  "pins" : [
+    {
+      "identity" : "apiservice",
+      "kind" : "remoteSourceControl",
+      "location" : "git@github.com:alejandroivan/APIService.git",
+      "state" : {
+        "revision" : "b01d16be78b9fb8c9ce90fac85393cd9def1ee2b",
+        "version" : "0.3.0"
+      }
+    }
+  ],
+  "version" : 3
+}
