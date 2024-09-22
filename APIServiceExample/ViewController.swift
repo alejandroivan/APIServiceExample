@@ -10,47 +10,80 @@ import UIKit
 
 class ViewController: UIViewController {
 
-    let apiService: APIService = API(sslPinning: .disabled)
+//    let apiService: APIService = API(
+//        sslPinning: .disabled,
+//        validStatusCodes: [200],
+//        baseHeaders: [
+//            "hello": "world"
+//        ]
+//    )
 
-    let apiServicePinnedWithKeyHashes: APIService = API(
-        sslPinning: .enabledWithKeyHashes([
-            "m6ncyOFW/CPikpd2JnrAb6FFKEoYu2wO0csJr7Njc20=",
-            "F3jGgttHVtSma2SMH+G1E4HzvVvvdIj2ntUG79K0hX0=",
-            "T2tSOvwzOpDlD0swkfKp91HsepNcVu9v5ORLv8e0yzY="
-        ])
-    )
+//    // With valid public key hashes
+//    let apiService: APIService = API(
+//        sslPinning: .enabledWithKeyHashes([ // These hashes match with pokeapi.co
+//            "m6ncyOFW/CPikpd2JnrAb6FFKEoYu2wO0csJr7Njc20=",
+//            "F3jGgttHVtSma2SMH+G1E4HzvVvvdIj2ntUG79K0hX0=",
+//            "T2tSOvwzOpDlD0swkfKp91HsepNcVu9v5ORLv8e0yzY="
+//        ]),
+//        validStatusCodes: [200],
+//        baseHeaders: [
+//            "hello": "world"
+//        ]
+//    )
 
-    let apiServicePinnedWithValidDERCertificate: APIService = {
-        guard let certificateURL = Bundle.main.url(forResource: "ValidCertificate-PokeApi", withExtension: "der") else {
+    // With valid DER certificate
+    let apiService: APIService = {
+        let certificateName = "ValidCertificate-PokeApi"
+        guard let certificateURL = Bundle.main.url(forResource: certificateName, withExtension: "der") else {
             fatalError("Cannot load certificate.")
         }
         return API(
             sslPinning: .enabledWithCertificateURLs([
                 certificateURL
-            ])
+            ]),
+            validStatusCodes: [200],
+            baseHeaders: [
+                "hello": "world"
+            ]
         )
     }()
 
-    let apiServicePinnedWithInvalidDERCertificate: APIService = {
-        guard let certificateURL = Bundle.main.url(forResource: "InvalidCertificate-Google", withExtension: "der") else {
-            fatalError("Cannot load certificate.")
-        }
-        return API(
-            sslPinning: .enabledWithCertificateURLs([
-                certificateURL
-            ])
-        )
-    }()
+//    // With invalid DER certificate (from Google)
+//    let apiService: APIService = {
+//        let certificateName = "InvalidCertificate-Google"
+//        guard let certificateURL = Bundle.main.url(forResource: certificateName, withExtension: "der") else {
+//            fatalError("Cannot load certificate.")
+//        }
+//        return API(
+//            sslPinning: .enabledWithCertificateURLs([
+//                certificateURL
+//            ]),
+//            validStatusCodes: [200],
+//            baseHeaders: [
+//                "hello": "world"
+//            ]
+//        )
+//    }()
 
-    let apiServicePinnedWithWrongHashes: APIService = API(
-        sslPinning: .enabledWithKeyHashes([
-            "wrong hash, this will fail"
-        ])
-    )
+//    // With wrong public key hashes
+//    let apiService: APIService = API(
+//        sslPinning: .enabledWithKeyHashes([
+//            "wrong hash, this will fail"
+//        ]),
+//        validStatusCodes: [200],
+//        baseHeaders: [
+//            "hello": "world"
+//        ]
+//    )
 
-    let apiServicePinnedWithoutHashes: APIService = API(
-        sslPinning: .enabledWithKeyHashes([])
-    )
+//    // Without public key hashes
+//    let apiService: APIService = API(
+//        sslPinning: .enabledWithKeyHashes([]),
+//        validStatusCodes: [200],
+//        baseHeaders: [
+//            "hello": "world"
+//        ]
+//    )
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -60,82 +93,49 @@ class ViewController: UIViewController {
 
         Task {
 
-            // MARK: - SSL Pinning Disabled
+            // MARK: - SSL Pinning
+            printSpacer()
 
             do {
-                let pokemon: Pokemon = try await apiService.get(url)
-                print("[SSL Pinning Disabled] Pokémon: \(pokemon)")
+                let pokemon: Pokemon = try await apiService.get(url, headers: ["bye": "universe!"])
+                print("[APIService] Response: \(pokemon)")
             } catch {
-                print("[SSL Pinning Disabled] Error: \(error)")
+                print("[APIService] Error: \(error)")
+
+                if let error = error as? APIError, let body = error.responseBody {
+                    print("[APIService] Error body: \(body)")
+                }
             }
 
             // MARK: - SSL Pinning Enabled - Custom Request
+            printSpacer()
 
             let request = Request(baseURL: url, method: .get, parameters: ["hello": "world"])
-            // Output: https://pokeapi.co/api/v2/pokemon/ditto?hello=world
-            print("[SSL Pinning Enabled - Custom Request] Final URL: \(request.finalURL)")
 
             do {
-                let (data, httpURLRequest) = try await apiServicePinnedWithKeyHashes.perform(
+                let (data, httpURLRequest) = try await apiService.perform(
                     request,
                     validatesStatusCode: false
                 )
 
                 guard [200, 204].contains(httpURLRequest.statusCode) else {
-                    print("[SSL Pinning Enabled - Custom Request] Invalid status code: \(httpURLRequest.statusCode)")
+                    print("[APIService - Custom Request] Invalid status code: \(httpURLRequest.statusCode)")
                     return
                 }
 
                 let pokemon: Pokemon = try JSONDecoder().decode(Pokemon.self, from: data)
-                print("[SSL Pinning Enabled - Custom Request] Pokémon: \(pokemon)")
+                print("[APIService - Custom Request] Response: \(pokemon)")
             } catch {
-                print("[SSL Pinning Enabled - Custom Request] Error: \(error)")
-            }
+                print("[APIService - Custom Request] Error: \(error)")
 
-            // MARK: - SSL Pinning Enabled - Valid Certificate: PokeApi
-
-            do {
-                let pokemon: Pokemon = try await apiServicePinnedWithValidDERCertificate.get(url)
-                print("[SSL Pinning Enabled - Valid Certificate: PokeApi] Pokémon: \(pokemon)")
-            } catch {
-                print("[SSL Pinning Enabled - Valid Certificate: PokeApi] Error: \(error)")
-            }
-
-            // MARK: - SSL Pinning Enabled - Invalid Certificate: Google
-
-            do {
-                let pokemon: Pokemon = try await apiServicePinnedWithInvalidDERCertificate.get(url)
-                print("[SSL Pinning Enabled - Invalid Certificate: Google] Pokémon: \(pokemon)")
-            } catch {
-                print("[SSL Pinning Enabled - Invalid Certificate: Google] Error: \(error)")
-            }
-
-            // MARK: - SSL Pinning Enabled - Valid Hashes
-
-            do {
-                let pokemon: Pokemon = try await apiServicePinnedWithKeyHashes.get(url)
-                print("[SSL Pinning Enabled - Valid Hashes] Pokémon: \(pokemon)")
-            } catch {
-                print("[SSL Pinning Enabled - Valid Hashes] Error: \(error)")
-            }
-
-            // MARK: - SSL Pinning Enabled - Wrong Hashes
-
-            do {
-                let pokemon: Pokemon = try await apiServicePinnedWithWrongHashes.get(url)
-                print("[SSL Pinning Enabled - Wrong Hashes] Pokémon: \(pokemon)")
-            } catch {
-                print("[SSL Pinning Enabled - Wrong Hashes] Error: \(error)")
-            }
-
-            // MARK: - SSL Pinning Enabled - No Hashes
-
-            do {
-                let pokemon: Pokemon = try await apiServicePinnedWithoutHashes.get(url)
-                print("[SSL Pinning Enabled - No Hashes] Pokémon: \(pokemon)")
-            } catch {
-                print("[SSL Pinning Enabled - No Hashes] Error: \(error)")
+                if let error = error as? APIError, let body = error.responseBody {
+                    print("[APIService - Custom Request] Error body: \(body)")
+                }
             }
         }
+    }
+
+    private func printSpacer() {
+        print("\n\n\n")
     }
 }
